@@ -124,3 +124,16 @@ def format_broadcast_message(text: str) -> str:
 ---
 <i>Bu xabar fakultet dekanati tomonidan yuborilgan</i>
 """
+
+
+def get_all_users() -> list:
+    """Barcha foydalanuvchilar ID larini olish"""
+    try:
+        with open(DATA_FILE, 'r', encoding='utf-8') as f:
+            all_data = json.load(f)
+            return [int(user_id) for user_id in all_data.keys()]
+    except FileNotFoundError:
+        return []
+    except Exception as e:
+        logger.error(f"Foydalanuvchilar ma'lumotlarini yuklashda xatolik: {e}")
+        return []

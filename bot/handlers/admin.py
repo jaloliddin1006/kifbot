@@ -3,6 +3,7 @@ Admin handlerlari
 """
 
 import logging
+import asyncio
 from aiogram import Router, F, Bot
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
@@ -10,10 +11,52 @@ from aiogram.fsm.context import FSMContext
 from ..config import GROUP_ID, MESSAGES
 from ..states import AdminBroadcast
 from ..keyboards import get_admin_menu, get_cancel_keyboard
-from ..utils import is_admin, format_broadcast_message, format_reply_message, format_group_reply_message
+from ..utils import is_admin, format_broadcast_message, format_reply_message, format_group_reply_message, get_all_users
 
 logger = logging.getLogger(__name__)
 router = Router()
+
+
+async def send_broadcast_to_users(bot: Bot, broadcast_text: str, admin_id: int):
+    """Background da barcha foydalanuvchilarga xabar yuborish"""
+    all_users = get_all_users()
+    success_count = 0
+    error_count = 0
+    
+    # Avval guruhga yuborish
+    try:
+        await bot.send_message(GROUP_ID, broadcast_text)
+        logger.info("Umumiy xabar guruhga yuborildi")
+    except Exception as e:
+        logger.error(f"Guruhga xabar yuborishda xatolik: {e}")
+    
+    # Barcha foydalanuvchilarga yuborish
+    for user_id in all_users:
+        try:
+            await bot.send_message(user_id, broadcast_text)
+            success_count += 1
+            # Har 10 ta xabardan keyin biroz kutish (rate limiting uchun)
+            if success_count % 10 == 0:
+                await asyncio.sleep(0.5)
+        except Exception as e:
+            error_count += 1
+            logger.error(f"Foydalanuvchi {user_id} ga xabar yuborishda xatolik: {e}")
+    
+    # Adminga natijani yuborish
+    result_message = f"""
+✅ <b>Xabar yuborish tugallandi!</b>
+
+📊 <b>Natijalar:</b>
+✅ Muvaffaqiyatli: {success_count}
+❌ Xatolik: {error_count}
+👥 Jami: {len(all_users)}
+"""
+    
+    try:
+        await bot.send_message(admin_id, result_message)
+        logger.info(f"Natija adminga ({admin_id}) yuborildi")
+    except Exception as e:
+        logger.error(f"Adminga natija yuborishda xatolik: {e}")
 
 
 @router.message(F.text == "/send_message", F.chat.type == "private")
@@ -33,7 +76,7 @@ async def admin_broadcast_start(message: Message, state: FSMContext):
 
 @router.message(AdminBroadcast.waiting_for_message, F.text != "❌ Bekor qilish", F.chat.type == "private")
 async def admin_broadcast_send(message: Message, state: FSMContext, bot: Bot):
-    """Umumiy xabarni yuborish"""
+    """Umumiy xabarni yuborish - backgroundda"""
     if not message.from_user or not is_admin(message.from_user.id):
         return
     
@@ -43,20 +86,21 @@ async def admin_broadcast_send(message: Message, state: FSMContext, bot: Bot):
     
     broadcast_text = format_broadcast_message(message.text)
     
-    # Bu yerda barcha foydalanuvchilarga xabar yuborish logikasi bo'lishi kerak
-    # Hozirda faqat guruhga yuboramiz
-    try:
-        await bot.send_message(GROUP_ID, broadcast_text)
-        await message.answer(
-            "✅ Xabar muvaffaqiyatli yuborildi!",
-            reply_markup=get_admin_menu()
-        )
-    except Exception as e:
-        logger.error(f"Umumiy xabar yuborishda xatolik: {e}")
-        await message.answer(
-            "❌ Xabar yuborishda xatolik yuz berdi!",
-            reply_markup=get_admin_menu()
-        )
+    # Darhol adminga tasdiqlash xabari yuborish
+    await message.answer(
+        "⏳ <b>Xabar yuborish boshlandi!</b>\n\n"
+        "Barcha foydalanuvchilarga xabar yuborilmoqda...\n"
+        "Tugagach natijani yuboraman.",
+        reply_markup=get_admin_menu()
+    )
+    
+    # Background taskni yaratish va ishga tushirish
+    task = asyncio.create_task(
+        send_broadcast_to_users(bot, broadcast_text, message.from_user.id)
+    )
+    
+    # Taskni background da ishlatish (kutmasdan)
+    logger.info(f"Background broadcast task yaratildi: {task}")
     
     await state.clear()
 
