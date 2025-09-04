@@ -167,3 +167,4 @@ cython_debug/
 *.sqlite
 data/
 logs/
+user_data.json
