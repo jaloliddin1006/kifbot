@@ -23,9 +23,9 @@ logger = logging.getLogger(__name__)
 router = Router()
 
 
-@router.message(F.text == "📝 Ariza/Taklif yuborish")
+@router.message(F.text == "📝 Ariza/Taklif yuborish", F.chat.type == "private")
 async def start_request(message: Message, state: FSMContext):
-    """Ariza yozishni boshlash"""
+    """Ariza yozishni boshlash - faqat private chatda"""
     if not message.from_user:
         return
         
@@ -38,7 +38,7 @@ async def start_request(message: Message, state: FSMContext):
     )
 
 
-@router.message(RequestForm.waiting_for_name, F.text != "❌ Bekor qilish")
+@router.message(RequestForm.waiting_for_name, F.text != "❌ Bekor qilish", F.chat.type == "private")
 async def process_name(message: Message, state: FSMContext):
     """Ism qabul qilish"""
     if not message.text:
@@ -61,7 +61,7 @@ async def process_name(message: Message, state: FSMContext):
     )
 
 
-@router.message(RequestForm.waiting_for_group, F.text != "❌ Bekor qilish")
+@router.message(RequestForm.waiting_for_group, F.text != "❌ Bekor qilish", F.chat.type == "private")
 async def process_group(message: Message, state: FSMContext):
     """Guruh qabul qilish"""
     if not message.text:
@@ -84,7 +84,7 @@ async def process_group(message: Message, state: FSMContext):
     )
 
 
-@router.message(RequestForm.waiting_for_contact, F.contact)
+@router.message(RequestForm.waiting_for_contact, F.contact, F.chat.type == "private")
 async def process_contact(message: Message, state: FSMContext):
     """Kontakt qabul qilish"""
     if not message.contact or not message.from_user:
@@ -111,7 +111,7 @@ async def process_contact(message: Message, state: FSMContext):
     )
 
 
-@router.message(RequestForm.waiting_for_message, F.text == "✅ Tasdiqlash")
+@router.message(RequestForm.waiting_for_message, F.text == "✅ Tasdiqlash", F.chat.type == "private")
 async def confirm_request(message: Message, state: FSMContext):
     """Arizani tasdiqlash"""
     data = await state.get_data()
@@ -127,7 +127,7 @@ async def confirm_request(message: Message, state: FSMContext):
     await message.answer(preview_text, reply_markup=get_confirmation_keyboard())
 
 
-@router.message(RequestForm.waiting_for_message, ~F.text.in_(["✅ Tasdiqlash", "❌ Bekor qilish"]))
+@router.message(RequestForm.waiting_for_message, ~F.text.in_(["✅ Tasdiqlash", "❌ Bekor qilish"]), F.chat.type == "private")
 async def process_request_content(message: Message, state: FSMContext):
     """Ariza matnini qabul qilish"""
     data = await state.get_data()
@@ -155,7 +155,7 @@ async def process_request_content(message: Message, state: FSMContext):
         await message.answer("📎 Fayl qabul qilindi. Davom eting yoki \"Tasdiqlash\" tugmasini bosing.")
 
 
-@router.message(RequestForm.confirming, F.text == "✅ Tasdiqlash")
+@router.message(RequestForm.confirming, F.text == "✅ Tasdiqlash", F.chat.type == "private")
 async def send_request_to_group(message: Message, state: FSMContext, bot: Bot):
     """Arizani guruhga yuborish"""
     if not message.from_user:

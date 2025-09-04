@@ -16,9 +16,9 @@ logger = logging.getLogger(__name__)
 router = Router()
 
 
-@router.message(F.text == "/send_message")
+@router.message(F.text == "/send_message", F.chat.type == "private")
 async def admin_broadcast_start(message: Message, state: FSMContext):
-    """Admin umumiy xabar yuborish"""
+    """Admin umumiy xabar yuborish - faqat private chatda"""
     if not message.from_user or not is_admin(message.from_user.id):
         await message.answer(MESSAGES["no_permission"])
         return
@@ -31,7 +31,7 @@ async def admin_broadcast_start(message: Message, state: FSMContext):
     )
 
 
-@router.message(AdminBroadcast.waiting_for_message, F.text != "❌ Bekor qilish")
+@router.message(AdminBroadcast.waiting_for_message, F.text != "❌ Bekor qilish", F.chat.type == "private")
 async def admin_broadcast_send(message: Message, state: FSMContext, bot: Bot):
     """Umumiy xabarni yuborish"""
     if not message.from_user or not is_admin(message.from_user.id):

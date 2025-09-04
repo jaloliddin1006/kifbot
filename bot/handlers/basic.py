@@ -16,9 +16,9 @@ logger = logging.getLogger(__name__)
 router = Router()
 
 
-@router.message(CommandStart())
+@router.message(CommandStart(), F.chat.type == "private")
 async def cmd_start(message: Message, state: FSMContext):
-    """Start komandasi"""
+    """Start komandasi - faqat private chatda"""
     await state.clear()
     
     if not message.from_user:
@@ -33,27 +33,27 @@ async def cmd_start(message: Message, state: FSMContext):
         await message.answer(welcome_text, reply_markup=get_main_menu())
 
 
-@router.message(F.text == "ℹ️ Dekanat haqida")
+@router.message(F.text == "ℹ️ Dekanat haqida", F.chat.type == "private")
 async def about_dean_office(message: Message):
-    """Dekanat haqida ma'lumot"""
+    """Dekanat haqida ma'lumot - faqat private chatda"""
     await message.answer(FACULTY_INFO["dekanat"])
 
 
-@router.message(F.text == "🏛️ Fakultet haqida")
+@router.message(F.text == "🏛️ Fakultet haqida", F.chat.type == "private")
 async def about_faculty(message: Message):
-    """Fakultet haqida ma'lumot"""
+    """Fakultet haqida ma'lumot - faqat private chatda"""
     await message.answer(FACULTY_INFO["fakultet"])
 
 
-@router.message(F.text == "📞 Bog'lanish")
+@router.message(F.text == "📞 Bog'lanish", F.chat.type == "private")
 async def contact_info(message: Message):
-    """Bog'lanish ma'lumotlari"""
+    """Bog'lanish ma'lumotlari - faqat private chatda"""
     await message.answer(FACULTY_INFO["contact"])
 
 
-@router.message(F.text == "❌ Bekor qilish")
+@router.message(F.text == "❌ Bekor qilish", F.chat.type == "private")
 async def cancel_operation(message: Message, state: FSMContext):
-    """Operatsiyani bekor qilish"""
+    """Operatsiyani bekor qilish - faqat private chatda"""
     await state.clear()
     
     if not message.from_user:
@@ -67,9 +67,9 @@ async def cancel_operation(message: Message, state: FSMContext):
     await message.answer(MESSAGES["operation_cancelled"], reply_markup=keyboard)
 
 
-@router.message()
+@router.message(F.chat.type == "private")
 async def handle_unknown_message(message: Message):
-    """Noma'lum xabarlarni qayta ishlash"""
+    """Noma'lum xabarlarni qayta ishlash - faqat private chatda"""
     if not message.from_user:
         return
         
