@@ -8,9 +8,9 @@ from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 
 from ..config import GROUP_ID, MESSAGES
-from ..states import AdminBroadcast, ReplyToUser
+from ..states import AdminBroadcast
 from ..keyboards import get_admin_menu, get_cancel_keyboard
-from ..utils import is_admin, format_broadcast_message, format_reply_message
+from ..utils import is_admin, format_broadcast_message, format_reply_message, format_group_reply_message
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -63,62 +63,77 @@ async def admin_broadcast_send(message: Message, state: FSMContext, bot: Bot):
 
 @router.callback_query(F.data.startswith("reply_"))
 async def handle_reply_callback(callback: CallbackQuery, state: FSMContext):
-    """Javob berish callback"""
+    """Javob berish callback - barcha foydalanuvchilar uchun alert"""
     try:
         # Callback ma'lumotlarini parsing qilish
         if not callback.data or not callback.message:
             await callback.answer("❌ Noto'g'ri ma'lumot!", show_alert=True)
             return
             
-        parts = callback.data.split("_")
-        if len(parts) >= 3:
-            chat_id = int(parts[1])
-            message_id = int(parts[2])
-            
-            await state.update_data(reply_chat_id=chat_id, reply_message_id=message_id)
-            await state.set_state(ReplyToUser.waiting_for_reply)
-            
-            await callback.message.answer(
-                "💬 <b>Javob yozish</b>\n\n"
-                "Talabaga yubormoqchi bo'lgan javobingizni yozing:",
-                reply_markup=get_cancel_keyboard()
-            )
-            
-            await callback.answer()
-        else:
-            await callback.answer("❌ Noto'g'ri ma'lumot!", show_alert=True)
+        # Barcha foydalanuvchilar uchun reply qilish ko'rsatmasi
+        await callback.answer(
+            "💬 Javob berish uchun xabarni reply qiling", 
+            show_alert=True
+        )
             
     except Exception as e:
         logger.error(f"Callback ishlov berishda xatolik: {e}")
         await callback.answer("❌ Xatolik yuz berdi!", show_alert=True)
 
 
-@router.message(ReplyToUser.waiting_for_reply, F.text != "❌ Bekor qilish")
-async def send_reply_to_user(message: Message, state: FSMContext, bot: Bot):
-    """Foydalanuvchiga javob yuborish"""
+# Guruhda reply orqali javob berish
+@router.message(F.chat.type.in_(["group", "supergroup"]), F.reply_to_message)
+async def handle_group_reply(message: Message, bot: Bot):
+    """Guruhda reply orqali javob berish - barcha guruh a'zolari uchun"""
     if not message.from_user or not message.text:
         return
-        
-    data = await state.get_data()
-    chat_id = data.get('reply_chat_id')
     
-    if not chat_id:
-        await message.answer("❌ Xatolik: Chat ID topilmadi!")
-        await state.clear()
+    # Reply qilingan xabar bot tomonidan yuborilganligini va inline keyboard borligini tekshirish
+    if (not message.reply_to_message or 
+        not message.reply_to_message.from_user or
+        not message.reply_to_message.reply_markup):
         return
     
-    reply_text = format_reply_message(message.text)
+    # Bot yuborgan xabar ekanligini tekshirish
+    bot_info = await bot.get_me()
+    if message.reply_to_message.from_user.id != bot_info.id:
+        return
     
     try:
-        await bot.send_message(chat_id, reply_text)
+        # Inline keyboard'dan callback data olish
+        inline_keyboard = message.reply_to_message.reply_markup.inline_keyboard
         
-        keyboard = get_admin_menu() if is_admin(message.from_user.id) else None
-        await message.answer("✅ Javob muvaffaqiyatli yuborildi!", reply_markup=keyboard)
+        # "reply_" bilan boshlanadigan callback_data ni topish
+        target_user_id = None
+        for row in inline_keyboard:
+            for button in row:
+                if button.callback_data and button.callback_data.startswith("reply_"):
+                    # callback_data: "reply_{user_id}_{message_id}"
+                    parts = button.callback_data.split("_")
+                    if len(parts) >= 2:
+                        target_user_id = int(parts[1])
+                        break
+            if target_user_id:
+                break
         
-    except Exception as e:
-        logger.error(f"Javob yuborishda xatolik: {e}")
+        if not target_user_id:
+            await message.reply("❌ Foydalanuvchi ID topilmadi!")
+            return
         
-        keyboard = get_admin_menu() if is_admin(message.from_user.id) else None
-        await message.answer("❌ Javob yuborishda xatolik yuz berdi!", reply_markup=keyboard)
-    
-    await state.clear()
+        # Javob yuboruvchi nomini olish
+        sender_name = message.from_user.full_name or f"@{message.from_user.username}" or "Guruh a'zosi"
+        
+        # Admin ekanligini tekshirib, mos xabar formatini tanlash
+        if is_admin(message.from_user.id):
+            reply_text = format_reply_message(message.text)
+        else:
+            reply_text = format_group_reply_message(message.text, sender_name)
+        
+        await bot.send_message(target_user_id, reply_text)
+        
+        # Tasdiqlash xabari
+        await message.reply("✅ Javob muvaffaqiyatli yuborildi!")
+        
+    except (ValueError, IndexError, Exception) as e:
+        logger.error(f"Guruhda reply orqali javob yuborishda xatolik: {e}")
+        await message.reply("❌ Javob yuborishda xatolik yuz berdi!")

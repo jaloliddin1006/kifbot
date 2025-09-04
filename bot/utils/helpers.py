@@ -101,6 +101,19 @@ def format_reply_message(text: str) -> str:
 """
 
 
+def format_group_reply_message(text: str, sender_name: str) -> str:
+    """Guruh a'zosi javob xabarini formatlash"""
+    return f"""
+📩 <b>Javob</b>
+
+{text}
+
+---
+<i>Fakultet dekanati</i>
+"""
+# <i>Javob beruvchi: {sender_name}</i>
+
+
 def format_broadcast_message(text: str) -> str:
     """Umumiy xabar formatini yaratish"""
     return f"""
