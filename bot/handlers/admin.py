@@ -190,13 +190,13 @@ async def handle_group_reply(message: Message, bot: Bot):
                 match = re.search(r"👥 Javoblar soni: (\d+)", current_text)
                 if match:
                     reply_count = int(match.group(1)) + 1
-                    # Eski javoblar sonini yangi son bilan almashtirish
-                    new_text = re.sub(r"👥 Javoblar soni: \d+", f"👥 Javoblar soni: {reply_count}", current_text)
+                    # Javoblar soni qismini olib tashlash
+                    new_text = re.sub(r"\n\n👥 Javoblar soni: \d+", "", current_text)
                 else:
-                    new_text = current_text + f"\n\n👥 Javoblar soni: {reply_count}"
+                    new_text = current_text
             else:
-                # Birinchi marta javob berilayotgan bo'lsa
-                new_text = current_text + f"\n\n👥 Javoblar soni: {reply_count}"
+                # Birinchi marta javob berilayotgan bo'lsa, matnni o'zgartirmaslik
+                new_text = current_text
             
             # Asl callback_data ni saqlash (javob berish uchun)
             original_callback_data = f"reply_{target_user_id}"
