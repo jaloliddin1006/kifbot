@@ -175,6 +175,64 @@ async def handle_group_reply(message: Message, bot: Bot):
         
         await bot.send_message(target_user_id, reply_text)
         
+        # Inline keyboard tugmasini yangilash va javoblar sonini hisoblash
+        try:
+            # Yangi keyboard yaratish
+            from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+            
+            # Joriy xabar matnidan javoblar sonini olish (agar mavjud bo'lsa)
+            current_text = message.reply_to_message.text or message.reply_to_message.caption or ""
+            reply_count = 1
+            
+            # Agar xabarda allaqachon javoblar soni ko'rsatilgan bo'lsa, uni yangilash
+            if "👥 Javoblar soni:" in current_text:
+                import re
+                match = re.search(r"👥 Javoblar soni: (\d+)", current_text)
+                if match:
+                    reply_count = int(match.group(1)) + 1
+                    # Eski javoblar sonini yangi son bilan almashtirish
+                    new_text = re.sub(r"👥 Javoblar soni: \d+", f"👥 Javoblar soni: {reply_count}", current_text)
+                else:
+                    new_text = current_text + f"\n\n👥 Javoblar soni: {reply_count}"
+            else:
+                # Birinchi marta javob berilayotgan bo'lsa
+                new_text = current_text + f"\n\n👥 Javoblar soni: {reply_count}"
+            
+            # Asl callback_data ni saqlash (javob berish uchun)
+            original_callback_data = f"reply_{target_user_id}"
+            
+            new_keyboard = InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text=f"✅ Javob berildi ({reply_count})", callback_data=original_callback_data)]
+            ])
+            
+            # Xabar matni va keyboard ni yangilash
+            if message.reply_to_message.text:
+                await bot.edit_message_text(
+                    text=new_text,
+                    chat_id=message.chat.id,
+                    message_id=message.reply_to_message.message_id,
+                    reply_markup=new_keyboard,
+                    parse_mode="HTML"
+                )
+            elif message.reply_to_message.caption:
+                await bot.edit_message_caption(
+                    caption=new_text,
+                    chat_id=message.chat.id,
+                    message_id=message.reply_to_message.message_id,
+                    reply_markup=new_keyboard,
+                    parse_mode="HTML"
+                )
+            else:
+                # Faqat keyboard ni yangilash
+                await bot.edit_message_reply_markup(
+                    chat_id=message.chat.id,
+                    message_id=message.reply_to_message.message_id,
+                    reply_markup=new_keyboard
+                )
+            
+        except Exception as edit_error:
+            logger.error(f"Inline keyboard yangilashda xatolik: {edit_error}")
+        
         # Tasdiqlash xabari
         await message.reply("✅ Javob muvaffaqiyatli yuborildi!")
         

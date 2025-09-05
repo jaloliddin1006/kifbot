@@ -61,9 +61,9 @@ def format_request_message(data: Dict[str, Any], user_id: int) -> str:
     message = f"""
 🆕 <b>Yangi ariza/taklif</b>
 
-👤 <b>Talaba:</b> {data.get('full_name', 'Noma\'lum')}
-👥 <b>Guruh:</b> {data.get('group', 'Noma\'lum')}
-📱 <b>Telefon:</b> {data.get('phone_number', 'Noma\'lum')}
+👤 <b>Talaba:</b> {data.get('full_name', "Noma'lum")}
+👥 <b>Guruh:</b> {data.get('group', "Noma'lum")}
+📱 <b>Telefon:</b> {data.get('phone_number', "Noma'lum")}
 🆔 <b>Telegram ID:</b> {user_id}
 
 💬 <b>Xabar:</b>
