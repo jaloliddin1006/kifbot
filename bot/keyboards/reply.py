@@ -26,7 +26,7 @@ def get_admin_menu() -> ReplyKeyboardMarkup:
             [KeyboardButton(text="📝 Ariza/Taklif yuborish")],
             [KeyboardButton(text="ℹ️ Dekanat haqida"), KeyboardButton(text="🏛️ Fakultet haqida")],
             [KeyboardButton(text="📞 Bog'lanish")],
-            [KeyboardButton(text="/send_message")],
+            [KeyboardButton(text="/send_message"), KeyboardButton(text="/users_count")],
         ],
         resize_keyboard=True,
         one_time_keyboard=False

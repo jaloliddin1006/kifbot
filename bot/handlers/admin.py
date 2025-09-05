@@ -4,9 +4,11 @@ Admin handlerlari
 
 import logging
 import asyncio
+from datetime import datetime
 from aiogram import Router, F, Bot
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
+from datetime import datetime
 
 from ..config import GROUP_ID, MESSAGES
 from ..states import AdminBroadcast
@@ -239,3 +241,30 @@ async def handle_group_reply(message: Message, bot: Bot):
     except (ValueError, IndexError, Exception) as e:
         logger.error(f"Guruhda reply orqali javob yuborishda xatolik: {e}")
         await message.reply("❌ Javob yuborishda xatolik yuz berdi!")
+
+
+@router.message(F.text == "/users_count", F.chat.type == "private")
+async def show_users_count(message: Message):
+    """Foydalanuvchilar sonini ko'rsatish - faqat private chatda"""
+    if not message.from_user or not is_admin(message.from_user.id):
+        await message.answer(MESSAGES["no_permission"])
+        return
+    
+    try:
+        all_users = get_all_users()
+        users_count = len(all_users)
+        
+        stats_message = f"""
+📊 <b>Bot statistikasi</b>
+
+👥 <b>Jami foydalanuvchilar soni:</b> {users_count}
+📅 <b>Sana:</b> {datetime.now().strftime('%d.%m.%Y %H:%M')}
+
+💡 <i>Bu barcha botga start bosgan foydalanuvchilar soni</i>
+"""
+        
+        await message.answer(stats_message, reply_markup=get_admin_menu())
+        
+    except Exception as e:
+        logger.error(f"Foydalanuvchilar sonini ko'rsatishda xatolik: {e}")
+        await message.answer("❌ Statistikani olishda xatolik yuz berdi!")
