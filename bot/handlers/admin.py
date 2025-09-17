@@ -236,7 +236,7 @@ async def handle_group_reply(message: Message, bot: Bot):
             logger.error(f"Inline keyboard yangilashda xatolik: {edit_error}")
         
         # Tasdiqlash xabari
-        await message.reply("✅ Javob muvaffaqiyatli yuborildi!")
+        # await message.reply("✅ Javob muvaffaqiyatli yuborildi!")
         
     except (ValueError, IndexError, Exception) as e:
         logger.error(f"Guruhda reply orqali javob yuborishda xatolik: {e}")
